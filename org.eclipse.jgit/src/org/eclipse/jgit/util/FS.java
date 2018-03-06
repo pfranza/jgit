@@ -52,6 +52,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.text.MessageFormat;
@@ -59,6 +60,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +71,7 @@ import org.eclipse.jgit.annotations.Nullable;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.errors.CommandFailedException;
 import org.eclipse.jgit.internal.JGitText;
+import org.eclipse.jgit.lib.ConfigConstants;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.util.ProcessResult.Status;
@@ -1011,6 +1014,31 @@ public abstract class FS {
 		}
 	}
 
+	/**
+	 * Tried to file the directory that holds the hooks for the given repository
+	 *
+	 * @param repository
+	 *            The repository within which to find a hook.
+	 * @return The {@link java.nio.file.Path} for this specified repositories
+	 *         hook directory if it exists in the given repository.
+	 */
+	protected final Optional<Path> resolveHookDirectoryPath(
+			Repository repository) {
+		Optional<String> hookDir = Optional
+				.of(repository.getConfig().getString(
+						ConfigConstants.CONFIG_CORE_SECTION, null,
+						ConfigConstants.CONFIG_KEY_GIT_HOOKS));
+		if (hookDir.isPresent()) {
+			return Optional.of(
+					repository.getWorkTree().toPath().resolve(hookDir.get()));
+		} else {
+			if (repository.getDirectory() == null) {
+				return Optional.empty();
+			}
+			return Optional.of(repository.getDirectory().toPath()
+					.resolve(Constants.HOOKS));
+		}
+	}
 
 	/**
 	 * Tries to find a hook matching the given one in the given repository.
@@ -1024,12 +1052,13 @@ public abstract class FS {
 	 * @since 4.0
 	 */
 	public File findHook(Repository repository, final String hookName) {
-		File gitDir = repository.getDirectory();
-		if (gitDir == null)
-			return null;
-		final File hookFile = new File(new File(gitDir,
-				Constants.HOOKS), hookName);
-		return hookFile.isFile() ? hookFile : null;
+		Optional<Path> hookDirectory = resolveHookDirectoryPath(repository);
+		if (hookDirectory.isPresent()) {
+			Path hookPath = hookDirectory.get().resolve(hookName);
+			return hookPath.toFile().isFile() ? hookPath.toFile() : null;
+		}
+
+		return null;
 	}
 
 	/**
