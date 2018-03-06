@@ -181,6 +181,9 @@ public class ConfigConstants {
 	/** The "blockSize" key */
 	public static final String CONFIG_KEY_BLOCK_SIZE = "blockSize";
 
+	/** The "gitHooks" key */
+	public static final String CONFIG_KEY_GIT_HOOKS = "gitHooks";
+
 	/**
 	 * The "concurrencyLevel" key
 	 *

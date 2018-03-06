@@ -55,6 +55,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.jgit.api.errors.JGitInternalException;
@@ -333,17 +334,19 @@ public class FS_POSIX extends FS {
 		return FileUtils.normalize(name);
 	}
 
+
+
 	/** {@inheritDoc} */
 	@Override
 	public File findHook(Repository repository, String hookName) {
-		final File gitdir = repository.getDirectory();
-		if (gitdir == null) {
-			return null;
+		Optional<Path> hookDirectory = resolveHookDirectoryPath(repository);
+		if (hookDirectory.isPresent()) {
+			final Path hookPath = hookDirectory.get().resolve(hookName);
+			if (Files.isExecutable(hookPath)) {
+				return hookPath.toFile();
+			}
 		}
-		final Path hookPath = gitdir.toPath().resolve(Constants.HOOKS)
-				.resolve(hookName);
-		if (Files.isExecutable(hookPath))
-			return hookPath.toFile();
+
 		return null;
 	}
 
